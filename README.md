@@ -1,6 +1,6 @@
 
 
-[TOC]
+[[_TOC_]]
 
 # Cryton modules
 
