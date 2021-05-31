@@ -1,7 +1,7 @@
 import unittest
 import warnings
+from mod import execute
 from mock import patch, MagicMock, mock_open
-import importlib
 
 
 @patch('time.sleep', MagicMock)
@@ -11,17 +11,16 @@ class TestModules(unittest.TestCase):
         warnings.simplefilter('ignore', category=ResourceWarning)
         warnings.simplefilter('ignore', category=ImportWarning)
 
-        self.args = {'arguments': {}, 'target': '10.0.3.5'}
+        self.args = {}
 
     @patch('mod.ms')
     @patch('mod.get_session_ids', return_value=[])
+    @patch('mod.read_output', return_value='Success test data')
     def test_mod(self, *args):
-        module_name = "mod"
-        module_obj = importlib.import_module(module_name)
-        self.args.update({'arguments': {'exploit': 'test exploit'}})
+        self.args.update({'exploit': 'test exploit', 'exploit_arguments': {"RHOSTS": "127.0.0.1"}})
 
-        ret = module_obj.execute(self.args)
+        ret = execute(self.args)
 
         self.assertEqual(ret.get('return_code'), 0)
         self.assertEqual(ret.get('std_out'), 'Success test data')
-        self.assertIsNone(ret.get('std_err'))
+        self.assertIsNone(ret.get('mod_err'))

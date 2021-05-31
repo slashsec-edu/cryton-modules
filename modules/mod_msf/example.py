@@ -1,19 +1,17 @@
 from mod import execute, validate
 
 args = {
-    "arguments": {
-        "exploit": "auxiliary/scanner/ssh/ssh_login",
-        "exploit_arguments":
-            {
-                "RHOSTS": "127.0.0.1",
-                "USERNAME": "vagrant",
-                "PASSWORD": "vagrant"
-            }
-    }
+    "exploit": "auxiliary/scanner/ssh/ssh_login",
+    "exploit_arguments":
+        {
+            "RHOSTS": "127.0.0.1",
+            "USERNAME": "vagrant",
+            "PASSWORD": "vagrant"
+        }
 }
 
 try:
-    val_output = validate(args.get('arguments'))
+    val_output = validate(args)
     print("validate output: " + str(val_output))
 except Exception as ex:
     print(ex)

@@ -1,14 +1,12 @@
 from mod import execute, validate
 
 args = {
-    "arguments": {
-        "target": "127.0.0.1",
-        "cmd": "cat /etc/passwd",
-    }
+    "cmd": "cat /etc/passwd",
+    "session_id": '1'  # needs active session
 }
 
 try:
-    val_output = validate(args.get('arguments'))
+    val_output = validate(args)
     print("validate output: "+str(val_output))
 except Exception as ex:
     print(ex)
@@ -18,5 +16,3 @@ try:
     print("execute output: "+str(ex_output))
 except Exception as ex:
     print(ex)
-
-

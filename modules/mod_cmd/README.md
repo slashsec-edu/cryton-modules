@@ -31,7 +31,9 @@ Description of input parameters for module.
 | Parameter name   | Parameter description  |
 | ---------------- | ---------------------- |
 | `cmd` (required) | Command to be executed |
-| `output_file` (optional) | Where should be output file of module be stored, if not defined, output will be in the report file |
+| `session_id` (optional) | Msf session in which command should be executed |
+| `output_file`(optional)     | Flag whether you want to save the output to a file in Cryton evidence directory (eg. true, false(default)) |
+| `std_out` (optional) | Flag whether you want to return `std_out`(raw output of command) (eg. true, false(default)) |
 
 This module can use existing sessions with our [Cryton session management](https://cryton.gitlab-pages.ics.muni.cz/cryton-project/1.0/scenario/#session-management) feature.
 
@@ -40,28 +42,27 @@ This module can use existing sessions with our [Cryton session management](https
 ``` yaml
 attack_module_args:
   cmd: cat /etc/passwd
-  output_file: /tmp/
+  session_id: 1
 ```
 
 ## Output
 
-Description of output.
+Description of module output.
 
-| Parameter name  | Parameter description                                   |
-| --------------- | ------------------------------------------------------- |
-| `file_contents` | File that contains output of command in `cmd` parameter |
+| Parameter name | Parameter description                                        |
+| -------------- | ------------------------------------------------------------ |
+| `return_code`  | 0 - success<br />-1 - fail                    |
+| `std_out`      | Raw result of command                             |
+| `mod_err`      | Error while running module                        |
+| `mod_out`      | Module output that can be used as input for some modules |
 
-#### Example
+### Example
 
-**With `output_file` parameter:**
-
-```json
-{"mod_out": {"file_contents": "path/to/file"}}
 ```
-
-**Without `output_file` parameter:**
-
-```json
-{"mod_out": {"cmd_out": "command output"}}
+{
+    'return_code': 0, 
+ 	'std_out': 'contents of passwd file on target'
+ 	'mod_err': '', 
+ 	'mod_out': same as std_out
+}
 ```
-

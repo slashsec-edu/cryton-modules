@@ -1,42 +1,19 @@
-import unittest
-import warnings
-from mock import patch, MagicMock, mock_open
-import importlib
+from unittest import TestCase
+from mock import patch, MagicMock, Mock
+from mod import execute
 
 
-class FakeProcess:
-    def __init__(self, returncode, stdout, stderr):
-        self.returncode = returncode
-        self.stdout = stdout.encode()
-        self.stderr = stderr.encode()
+@patch('time.sleep', MagicMock())
+class TestModules(TestCase):
 
-    def check_returncode(self):
-        return 0
-
-    def kill(self):
-        pass
-
-
-@patch('time.sleep', MagicMock)
-class TestModules(unittest.TestCase):
-    def setUp(self):
-        warnings.simplefilter('ignore', category=DeprecationWarning)
-        warnings.simplefilter('ignore', category=ResourceWarning)
-        warnings.simplefilter('ignore', category=ImportWarning)
-
-        self.args = {'arguments': {}, 'target': '10.0.3.5'}
-
-    @patch('subprocess.Popen', return_value=FakeProcess(0, "test out", "test err"))
-    @patch('os.remove', MagicMock)
-    @patch('mod.open',
-           mock_open(read_data="Medusa has finished\n User: testlogin Password: testpass [SUCCESS]\n"))
+    @patch('os.remove', MagicMock())
     def test_mod(self, *args):
-        module_name = "mod"
-        module_obj = importlib.import_module(module_name)
-        self.args.update({'arguments': {'username': 'test', 'password': 'test'}})
-
-        ret = module_obj.execute(self.args)
-
+        args = {'target': '10.0.3.7', 'username': 'test', 'password': 'test', 'output_file': True}
+        mock_run = Mock()
+        mock_run.stdout = b"ACCOUNT FOUND: [ssh] Host: 127.0.0.1 User: testlogin Password: testpass [SUCCESS]"
+        mock_run.stderr = b"error"
+        with patch('subprocess.run', return_value=mock_run):
+            ret = execute(args)
         self.assertEqual(ret.get('return_code'), 0)
-        self.assertEqual(ret.get('std_out'), {'1': {'username': 'testlogin', 'password': 'testpass'}})
-        self.assertIsNone(ret.get('std_err'))
+        self.assertEqual(ret.get('std_out'), 'Output file saved in evidence dir')
+        self.assertEqual(ret.get('mod_out'), {'username': 'testlogin', 'password': 'testpass'})

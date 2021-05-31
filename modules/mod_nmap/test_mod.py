@@ -1,27 +1,41 @@
-import unittest
-import warnings
+from unittest import TestCase
+from mod import execute
 from mock import patch, MagicMock
-import importlib
 
 
-@patch('time.sleep', MagicMock)
-class TestModules(unittest.TestCase):
-    def setUp(self):
-        warnings.simplefilter('ignore', category=DeprecationWarning)
-        warnings.simplefilter('ignore', category=ResourceWarning)
-        warnings.simplefilter('ignore', category=ImportWarning)
+@patch("time.sleep", MagicMock)
+class TestModules(TestCase):
 
-        self.args = {'arguments': {}, 'target': '10.0.3.5'}
+    @patch("mod.execute_scan", return_value={
+        "127.0.0.1": {
+            "ports": [
+                {
+                    "protocol": "tcp",
+                    "portid": "22",
+                    "state": "open",
+                },
+            ],
+        },
+        "stats": {},
+        "runtime": {},
+    }
 
-    @patch('mod.nmap.PortScanner', MagicMock)
-    @patch('csv.DictReader', return_value=[{'port': "22", 'state': 'open'}, {'port': "443", 'state': 'open'}])
+           )
     def test_mod(self, *scanner):
-        module_name = "mod"
-        module_obj = importlib.import_module(module_name)
-        self.args.update({'arguments': {"ports": [22, 443]}})
+        args = {"target": "127.0.0.1", "ports": [22, 80]}
+        ret = execute(args)
 
-        ret = module_obj.execute(self.args)
-
-        self.assertEqual(ret.get('return_code'), 0)
-        self.assertIn('"port": "22"', ret.get('std_out'))
-        self.assertIsNone(ret.get('std_err'))
+        self.assertEqual(ret.get("return_code"), 0)
+        self.assertEqual(ret.get("mod_out"), {
+            "127.0.0.1": {
+                "ports": [
+                    {
+                        "protocol": "tcp",
+                        "portid": "22",
+                        "state": "open",
+                    },
+                ],
+            },
+        }
+                         )
+        self.assertIsNone(ret.get("mod_err"))

@@ -2,6 +2,7 @@
 from pymetasploit3.msfrpc import MsfRpcClient as ms
 
 from cryton_worker.etc import config
+from cryton_worker.lib.util.module_util import Metasploit
 
 import time
 import copy
@@ -9,21 +10,23 @@ import sys
 from schema import Schema, Optional, And
 
 
-def validate(step_args):
+def validate(arguments: dict) -> int:
     """
-    Validate input values for the execute function
+    Validate input values for the execute function.
 
-    :param dict step_args: execute function args.get('arguments')
-    :return: 0
+    :param arguments: Arguments for module execution
+    :return: 0 If arguments are valid
     :raises: Schema Exception
     """
     conf_schema = Schema({
         'exploit': And(str),
-        Optional('payload'): And(str),
-        Optional(str): And(str)
+        Optional("std_out"): And(bool),
+        Optional('exploit_arguments'): {
+            Optional(str): And(str)
+        }
     })
 
-    conf_schema.validate(step_args)
+    conf_schema.validate(arguments)
 
     return 0
 
@@ -37,67 +40,64 @@ MSFRPCD_PORT = config.MSFRPCD_PORT
 MSFRPCD_SSL = config.MSFRPCD_SSL
 
 
-def get_session_ids(target_ip):
+def read_output(client, console_id: int) -> str:
     """
-    Get a list of session IDs
+    Reads output from msfrpcd exploit execution.
 
-    :param str target_ip: IP address of the desired target
-    :return: list of session IDs
+    :param client: msfrpcd client
+    :param console_id: created console id
+    :return: exploit output
     """
-    sess_list = list()
+    output = client.call('console.read', [console_id])
+    data = output.get('data')
+    while output.get('busy'):
+        time.sleep(1)
+        output = client.call('console.read', [console_id])
+        data += "\n===MORE DATA===\n"
+        data += output.get('data')
+    return data
 
-    client = ms(MSFRPCD_PASS, username=MSFRPCD_USERNAME,
-                port=MSFRPCD_PORT, ssl=MSFRPCD_SSL)
 
-    for session_key, session_value in client.sessions.list.items():
-        if session_value['target_host'] == target_ip or session_value['tunnel_peer'].split(':')[0] == target_ip:
-            sess_list.append(session_key)
-    return sess_list
-
-
-def execute(args):
+def get_current_job_id(jobs_after: dict, jobs_before: dict) -> int:
     """
-    This attack module can run Metasploit scripts in virtual Metasploit console connected to
-    msfrpcd daemon.
+    Get new job created in this exploit execution.
 
-    Available arguments are:
+    :param jobs_after: Jobs created before this run
+    :param jobs_before: Jobs after exploit execution started
+    :return: Current job id
+    """
+    new_jobs = set(jobs_after.keys()) - set(jobs_before.keys())
+    try:
+        new_job_id = new_jobs.pop()
+    except KeyError:
+        new_job_id = None
+    return new_job_id
 
-    * exploit: exploit/auxilliary/... or any other family of Metasploit console scripts
 
-    * exploit_arguments: custom dict of Metasploit module specific arguments (eg. RHOSTS, RPORT)
+def execute(args: dict) -> dict:
+    """
+    Takes arguments in form of dictionary and runs Msf based on them.
 
-    example:
-        args = {"arguments": {"exploit": "auxiliary/scanner/ssh/ssh_login",
-                              "exploit_arguments": {
-                                  "USERPASS_FILE": "/home/nutar/temp/userpass.txt",
-                                  "RHOSTS": "192.168.56.101"
-                                }
-                              }
-                }
-    :param dict args: dictionary of mandatory subdictionary 'arguments' and other optional elements
-    :return: ret_vals: dictionary with following values:
+    :param args: Arguments from which is compiled and ran medusa command
+    :return: Module output containing:
+                return_code (0-success, -1-fail),
+                std_out (raw output),
+                mod_out (parsed output that can be used in other modules),
+                mod_err (error output)
 
-        * ret: 0 in success, other number in failure,
-
-        * value: return value, usually stdout,
-
-        * std_err: error message, if any
     """
     ret_vals = dict(dict())
     ret_vals.update({'return_code': -1})
     ret_vals.update({'std_out': None})
-    ret_vals.update({'std_err': None})
-    ret_vals.update({'mod_out': None})
     ret_vals.update({'mod_err': None})
+    ret_vals.update({'mod_out': None})
 
     # Copy arguments to not change them by mistake
-    args = copy.deepcopy(args)
-
-    # Get arguments
-    arguments = args.get('arguments')
+    arguments = copy.deepcopy(args)
 
     # Parse exploit
     exploit = arguments.get('exploit')
+    std_out_flag = arguments.get("std_out", False)
     exploit_arguments = arguments.get('exploit_arguments')
 
     # Open client
@@ -105,7 +105,7 @@ def execute(args):
         client = ms(MSFRPCD_PASS, username=MSFRPCD_USERNAME,
                     port=MSFRPCD_PORT, ssl=MSFRPCD_SSL)
     except Exception:
-        ret_vals.update({'return_code': -2, 'std_err': str(sys.exc_info())})
+        ret_vals.update({'return_code': -1, 'mod_err': str(sys.exc_info())})
         return ret_vals
 
     # Set parameters
@@ -122,22 +122,17 @@ def execute(args):
 
     # Get sessions before
     target = exploit_arguments.get('RHOSTS')
-    before_sessions = get_session_ids(target)
+    before_sessions = Metasploit().get_target_sessions(target)
     jobs_before = client.jobs.list
 
     # Run exploit
     client.call('console.write', [console_id, s])
     time.sleep(1)
 
-    # Check created job
     jobs_after = client.jobs.list
-    new_jobs = set(jobs_after.keys()) - set(jobs_before.keys())
-    try:
-        new_job_id = new_jobs.pop()
-    except KeyError:
-        new_job_id = None
+    new_job_id = get_current_job_id(jobs_after, jobs_before)
 
-    # Wait until job finishes
+    # Wait until current job is finished
     if new_job_id is not None:
         # Until job ends
         while new_job_id in jobs_after.keys():
@@ -145,27 +140,22 @@ def execute(args):
             jobs_after = client.jobs.list
 
     # Read output of job
-    output = client.call('console.read', [console_id])
-    data = output.get('data')
-    while output.get('busy'):
-        time.sleep(1)
-        output = client.call('console.read', [console_id])
-        data += "\n===MORE DATA===\n"
-        data += output.get('data')
+    data = read_output(client, console_id)
 
-    # Store data to std_out
-    ret_vals.update({'std_out': data})
+    # Return std_out
+    if std_out_flag is True:
+        ret_vals.update({'std_out': str(data)})
 
     # Check for Error or Success
     if 'OptionValidateError' in data:
-        ret_vals.update({'return_code': -1, 'std_err': str(data)})
+        ret_vals.update({'return_code': -1, 'mod_err': str(data)})
         return ret_vals
 
     if 'Success' in data or ('[+]' in data and '[-]' not in data):
-        ret_vals.update({'return_code': 0, 'std_out': str(data)})
+        ret_vals.update({'return_code': 0, 'mod_out': str(data)})
 
     # get sessions after
-    after_sessions = get_session_ids(target)
+    after_sessions = Metasploit().get_target_sessions(target)
 
     # Get new session
     new_sessions_to_same_host = list(set(after_sessions) - set(before_sessions))
