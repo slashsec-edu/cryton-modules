@@ -1,8 +1,9 @@
 from mod import execute, validate
 
 args = {
-    "cmd": "cat /etc/passwd",
-    "session_id": '1'  # needs active session
+    "cmd": "cat /etc/passwd; echo end_check_string",
+    "end_check": "end_check_string",
+    "session_id": "1"  # needs active session
 }
 
 try:
