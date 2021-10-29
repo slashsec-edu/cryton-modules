@@ -31,6 +31,7 @@ Description of input parameters for module.
 | Parameter name   | Parameter description  |
 | ---------------- | ---------------------- |
 | `cmd` (required) | Command to be executed |
+| `end_check` (optional) | String that is checked regularly to determine whether the command execution finished |
 | `session_id` (optional) | Msf session in which command should be executed |
 | `output_file`(optional)     | Flag whether you want to save the output to a file in Cryton evidence directory (eg. true, false(default)) |
 | `std_out` (optional) | Flag whether you want to return `std_out`(raw output of command) (eg. true, false(default)) |
@@ -41,7 +42,8 @@ This module can use existing sessions with our [Cryton session management](https
 
 ``` yaml
 attack_module_args:
-  cmd: cat /etc/passwd
+  cmd: cat /etc/passwd; echo end_check_string
+  end_check: end_check_string
   session_id: 1
 ```
 

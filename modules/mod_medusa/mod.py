@@ -6,6 +6,7 @@ import datetime
 import os
 from typing import Optional as OptionalType
 from schema import Schema, Optional, And, Or
+
 from cryton_worker.lib.util.module_util import File
 
 
@@ -185,7 +186,7 @@ def execute(arguments: dict) -> dict:
     """
     Takes arguments in form of dictionary and runs Medusa based on them.
 
-    :param args: Arguments from which is compiled and ran medusa command
+    :param arguments: Arguments from which is compiled and ran medusa command
     :return: Module output containing:
                 return_code (0-success, 1-fail, 2-err),
                 std_out (raw output),

@@ -1,13 +1,10 @@
 #!/usr/bin/python
-from pymetasploit3.msfrpc import MsfRpcClient as ms
-
-from cryton_worker.etc import config
-from cryton_worker.lib.util.module_util import Metasploit
-
 import time
 import copy
 import sys
 from schema import Schema, Optional, And
+
+from cryton_worker.lib.util.module_util import Metasploit
 
 
 def validate(arguments: dict) -> int:
@@ -29,15 +26,6 @@ def validate(arguments: dict) -> int:
     conf_schema.validate(arguments)
 
     return 0
-
-
-"""
-Configuration variables
-"""
-MSFRPCD_PASS = config.MSFRPCD_PASS
-MSFRPCD_USERNAME = config.MSFRPCD_USERNAME
-MSFRPCD_PORT = config.MSFRPCD_PORT
-MSFRPCD_SSL = config.MSFRPCD_SSL
 
 
 def read_output(client, console_id: int) -> str:
@@ -102,8 +90,7 @@ def execute(args: dict) -> dict:
 
     # Open client
     try:
-        client = ms(MSFRPCD_PASS, username=MSFRPCD_USERNAME,
-                    port=MSFRPCD_PORT, ssl=MSFRPCD_SSL)
+        msf = Metasploit()
     except Exception:
         ret_vals.update({'return_code': -1, 'mod_err': str(sys.exc_info())})
         return ret_vals
@@ -115,21 +102,21 @@ def execute(args: dict) -> dict:
     s += "exploit -j;\n"
 
     # Create console
-    console_id = client.consoles.console().cid
+    console_id = msf.client.consoles.console().cid
 
     # Clear console
-    client.call('console.read', [console_id])
+    msf.client.call('console.read', [console_id])
 
     # Get sessions before
     target = exploit_arguments.get('RHOSTS')
-    before_sessions = Metasploit().get_target_sessions(target)
-    jobs_before = client.jobs.list
+    before_sessions = msf.get_sessions(target_host=target, tunnel_peer=target)
+    jobs_before = msf.client.jobs.list
 
     # Run exploit
-    client.call('console.write', [console_id, s])
+    msf.client.call('console.write', [console_id, s])
     time.sleep(1)
 
-    jobs_after = client.jobs.list
+    jobs_after = msf.client.jobs.list
     new_job_id = get_current_job_id(jobs_after, jobs_before)
 
     # Wait until current job is finished
@@ -137,10 +124,10 @@ def execute(args: dict) -> dict:
         # Until job ends
         while new_job_id in jobs_after.keys():
             time.sleep(5)
-            jobs_after = client.jobs.list
+            jobs_after = msf.client.jobs.list
 
     # Read output of job
-    data = read_output(client, console_id)
+    data = read_output(msf.client, console_id)
 
     # Return std_out
     if std_out_flag is True:
@@ -155,16 +142,15 @@ def execute(args: dict) -> dict:
         ret_vals.update({'return_code': 0, 'mod_out': str(data)})
 
     # get sessions after
-    after_sessions = Metasploit().get_target_sessions(target)
+    after_sessions = msf.get_sessions(target_host=target, tunnel_peer=target)
 
     # Get new session
     new_sessions_to_same_host = list(set(after_sessions) - set(before_sessions))
 
     if len(new_sessions_to_same_host) > 0:
-        for session_key, session_value in client.sessions.list.items():
-            if (session_value['target_host'] == target or session_value['tunnel_peer'].split(':')[0] == target) \
-                    and session_value['via_exploit'] == exploit:
-                ret_vals.update({'session_id': session_key})
-                ret_vals.update({'return_code': 0})
+        sessions = msf.get_sessions(target_host=target, tunnel_peer=target, via_exploit=exploit)
+        if sessions is not None:
+            ret_vals.update({'session_id': sessions[-1]})
+            ret_vals.update({'return_code': 0})
 
     return ret_vals

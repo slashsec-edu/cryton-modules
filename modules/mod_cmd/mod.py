@@ -1,21 +1,13 @@
 #!/usr/bin/python
-
-import time
 import traceback
 import subprocess
 import json
 import string
 import datetime
 import random
-from pymetasploit3.msfrpc import MsfRpcClient as ms
 from schema import Schema, Optional, And
-from cryton_worker.etc import config
 
-# Config variables
-MSFRPCD_PASS = config.MSFRPCD_PASS
-MSFRPCD_USERNAME = config.MSFRPCD_USERNAME
-MSFRPCD_PORT = config.MSFRPCD_PORT
-MSFRPCD_SSL = config.MSFRPCD_SSL
+from cryton_worker.lib.util.module_util import Metasploit
 
 
 def validate(arguments: dict) -> int:
@@ -28,6 +20,7 @@ def validate(arguments: dict) -> int:
     """
     conf_schema = Schema({
         'cmd': And(str),
+        Optional('end_check'): str,
         Optional('target'): And(str),
         Optional('timeout'): And(int),
         Optional('output_file'): And(bool),
@@ -38,29 +31,6 @@ def validate(arguments: dict) -> int:
     conf_schema.validate(arguments)
 
     return 0
-
-
-def execute_in_msf_session(cmd: str, msf_session_id: str) -> str:
-    """
-    Execute command in session
-
-    :param cmd: shell command
-    :param msf_session_id: Metasploit session ID
-    :return: output of command execution, return code {'code', 'output'}
-    """
-    client = ms(MSFRPCD_PASS, username=MSFRPCD_USERNAME,
-                port=MSFRPCD_PORT, ssl=MSFRPCD_SSL)
-    console = client.sessions.session(msf_session_id)
-    # Execute command
-    new_out = "START"
-    output = ""
-    console.write(cmd)
-    while new_out:
-        new_out = console.read()
-        output += new_out
-        time.sleep(1)
-
-    return output
 
 
 def create_output_file() -> str:
@@ -94,6 +64,7 @@ def execute(arguments: dict) -> dict:
 
     session_id = arguments.get('session_id', False)
     cmd = list(arguments.get('cmd').split(' '))
+    end_check = arguments.get('end_check')
     output_file = arguments.get('output_file', False)
     std_out_flag = arguments.get('std_out', False)
     timeout = arguments.get('timeout', None)
@@ -102,7 +73,8 @@ def execute(arguments: dict) -> dict:
         if int(session_id) != 0:
             cmd = " ".join(cmd)
             try:
-                output = execute_in_msf_session(cmd, session_id)
+                msf = Metasploit()
+                output = msf.execute_in_session(cmd, session_id, end_check)
             except Exception as ex:
                 ret_vals.update({'return_code': -1, 'mod_err': 'couldn\'t execute command in msf - is msfrpcd running? '
                                                                'Original exception: {}'.format(ex)})
