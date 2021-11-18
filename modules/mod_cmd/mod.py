@@ -63,7 +63,7 @@ def execute(arguments: dict) -> dict:
     ret_vals.update({'mod_err': None})
 
     session_id = arguments.get('session_id', False)
-    cmd = list(arguments.get('cmd').split(' '))
+    cmd = arguments.get('cmd')
     end_check = arguments.get('end_check')
     output_file = arguments.get('output_file', False)
     std_out_flag = arguments.get('std_out', False)
@@ -71,7 +71,6 @@ def execute(arguments: dict) -> dict:
 
     if session_id is not False:
         if int(session_id) != 0:
-            cmd = " ".join(cmd)
             try:
                 msf = Metasploit()
                 output = msf.execute_in_session(cmd, session_id, end_check)
@@ -86,7 +85,7 @@ def execute(arguments: dict) -> dict:
 
     else:
         try:
-            process = subprocess.run(cmd, timeout, capture_output=True)
+            process = subprocess.run(cmd, timeout=timeout, capture_output=True, shell=True)
             process.check_returncode()
             output = process.stdout
             error = process.stderr
@@ -108,12 +107,12 @@ def execute(arguments: dict) -> dict:
             ret_vals.update({'return_code': 0})
             ret_vals.update({'mod_err': error.decode("utf-8")})
 
-    ret_vals.update({'mod_out': output})
+    ret_vals.update({'mod_out': output.decode("utf-8")})
     ret_vals.update({'return_code': 0})
     if output_file is True:
         ret_vals.update({'std_out': 'Output file saved in evidence dir'})
         ret_vals.update({'file': {'file_name': create_output_file(), 'file_content': output}})
     elif std_out_flag is True:
-        ret_vals.update({'std_out': output})
+        ret_vals.update({'std_out': output.decode("utf-8")})
 
     return ret_vals
