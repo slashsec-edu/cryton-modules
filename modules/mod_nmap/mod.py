@@ -78,8 +78,7 @@ def execute_scan(target: str, options: OptionalType[str], ports: OptionalType[li
         ports_string = ' -p' + ','.join(list(map(str, ports)))
         arguments += ports_string
         return nm.nmap_version_detection(target=target, args=arguments)
-
-    return nm.scan_top_ports(target=target, args=arguments)
+    return nm.scan_top_ports(target=target, default=1000, args=arguments)
 
 
 def filtering_ports(scan_result: dict, desired_port_parameters: list) -> dict:
