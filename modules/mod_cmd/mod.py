@@ -107,12 +107,17 @@ def execute(arguments: dict) -> dict:
             ret_vals.update({'return_code': 0})
             ret_vals.update({'mod_err': error.decode("utf-8")})
 
-    ret_vals.update({'mod_out': output.decode("utf-8")})
+    try:
+        output_decoded = output.decode("utf-8")
+    except AttributeError:
+        output_decoded = output
+
+    ret_vals.update({'mod_out': output_decoded})
     ret_vals.update({'return_code': 0})
     if output_file is True:
         ret_vals.update({'std_out': 'Output file saved in evidence dir'})
         ret_vals.update({'file': {'file_name': create_output_file(), 'file_content': output}})
     elif std_out_flag is True:
-        ret_vals.update({'std_out': output.decode("utf-8")})
+        ret_vals.update({'std_out': output_decoded})
 
     return ret_vals
