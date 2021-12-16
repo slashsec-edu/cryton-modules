@@ -1,4 +1,3 @@
-
 [[_TOC_]]
 
 # Cryton Modules
@@ -16,6 +15,8 @@ As mentioned above, Cryton Worker is used for validating and executing modules a
 install their requirements. To do that you either install them manually inside Cryton Worker's environment or you use 
 Cryton Worker's CLI: `cryton-worker start --install-requirements`. If this flag is specified each *requirements.txt* file 
 inside the Worker's modules directory will be checked and installed.
+
+[Link to the documentation](https://beast-public.gitlab-pages.ics.muni.cz/cryton/cryton-documentation/).
 
 ## Installation
 There is no need to install the modules, just copy them to the Worker's modules directory (see 
