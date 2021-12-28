@@ -140,6 +140,9 @@ def execute(args: dict) -> dict:
 
     if 'Success' in data or ('[+]' in data and '[-]' not in data):
         ret_vals.update({'return_code': 0, 'mod_out': str(data)})
+    else:
+        ret_vals.update({'return_code': -1, 'mod_err': str(data)})
+        return ret_vals
 
     # get sessions after
     after_sessions = msf.get_sessions(target_host=target, tunnel_peer=target)

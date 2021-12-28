@@ -56,12 +56,12 @@ def execute(arguments: dict) -> dict:
 
 ### Input parameters
 Every module has its own input parameters specified. These input parameters are given as a dictionary to the 
-module `execute` (when executing the module) or `validate` (when validating the module parameters) function. 
+module `execute` (when executing the module) or `validate` (when validating the module parameters) function.
 
 ### Output parameters
 Every attack module returns a dictionary with following keys:
 
-| Parameter name | Parameter meaning                                                                                                                                                                                                                                 |
+| Parameter name | Parameter description                                                                                                                                                                                                                                 |
 |----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `return_code`  | Numeric representation of result (0, -1, -2) <br />0 (OK) means the module finished successfully<br />-1 (FAIL) means the module finished unsuccessfully<br />-2 (EXCEPTION) means the module finished with an unhandled error                    |
 | `mod_out`      | Parsed output of module. Eg. for bruteforce module, this might be a list of found usernames and passwords.                                                                                                                                        |
