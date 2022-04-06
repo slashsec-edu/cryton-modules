@@ -4,7 +4,7 @@ args = {
     "exploit": "auxiliary/scanner/ssh/ssh_login",
     "exploit_arguments":
         {
-            "RHOSTS": "127.0.0.1",
+            "RHOSTS": "192.168.62.98",
             "USERNAME": "vagrant",
             "PASSWORD": "vagrant"
         }
