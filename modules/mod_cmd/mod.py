@@ -5,6 +5,8 @@ import json
 import string
 import datetime
 import random
+
+from pymetasploit3.msfrpc import MeterpreterSession, ShellSession
 from schema import Schema, Optional, And
 
 from cryton_worker.lib.util.module_util import Metasploit
@@ -73,7 +75,16 @@ def execute(arguments: dict) -> dict:
         if int(session_id) != 0:
             try:
                 msf = Metasploit()
-                output = msf.execute_in_session(cmd, session_id, end_check)
+
+                session = msf.client.sessions.session(session_id)
+
+                output = ""
+                if isinstance(session, MeterpreterSession):
+                    output = session.run_with_output(cmd, end_check)
+
+                if isinstance(session, ShellSession):
+                    output = msf.execute_in_session(cmd, session_id, end_check)
+
             except Exception as ex:
                 ret_vals.update({'return_code': -1, 'mod_err': 'couldn\'t execute command in msf - is msfrpcd running? '
                                                                'Original exception: {}'.format(ex)})

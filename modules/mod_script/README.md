@@ -24,7 +24,7 @@ Description of input parameters for module.
 
 ```yaml
 attack_module_args:
-  file: /root/example.py
+  file: /root/example_with_payload.py
   args: -t 10.10.10.5
   output_file: /tmp/
   timeout: 30
